@@ -7,3 +7,25 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+enum AiProviderKind {
+  openai
+  anthropic
+  google
+  openrouter
+  github
+}
+
+model AiProvider {
+  id           String         @id @default(cuid())
+  label        String         @unique
+  kind         AiProviderKind
+  encryptedKey String
+  keyLast4     String
+  isDefault    Boolean        @default(false)
+  lastTestedAt DateTime?
+  lastTestOk   Boolean?
+  defaultModel String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
