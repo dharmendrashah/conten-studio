@@ -15,6 +15,7 @@ import {
   setDefaultProvider,
   SettingsError,
   setProviderModel,
+  setUseCaseDefault,
   updateProvider,
 } from "./repository";
 import {
@@ -23,6 +24,7 @@ import {
   providerIdSchema,
   githubPollSchema,
   setProviderModelSchema,
+  setUseCaseDefaultSchema,
   updateProviderSchema,
 } from "./schema";
 
@@ -121,6 +123,21 @@ export async function setProviderModelAction(input: unknown): Promise<ActionResu
       throw new SettingsError("MODEL_NOT_AVAILABLE", "That model is not available for this provider");
     }
     await setProviderModel(db, id, model);
+  });
+}
+
+export async function setUseCaseDefaultAction(input: unknown): Promise<ActionResult> {
+  const parsed = setUseCaseDefaultSchema.safeParse(input);
+  if (!parsed.success) return { ok: false, error: parsed.error.issues[0]?.message ?? "Invalid input" };
+  const { useCase, providerId, model } = parsed.data;
+  return run(async () => {
+    const { kind, apiKey } = await providerApiKey(providerId);
+    const result = await listProviderModels(kind, apiKey);
+    if (!result.ok) throw new SettingsError("CONNECTION_FAILED", result.reason);
+    if (!result.models.includes(model)) {
+      throw new SettingsError("MODEL_NOT_AVAILABLE", "That model is not available for this provider");
+    }
+    await setUseCaseDefault(db, { useCase, providerId, model });
   });
 }
 

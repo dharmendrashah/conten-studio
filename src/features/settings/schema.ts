@@ -28,6 +28,14 @@ export const updateProviderSchema = z.object({
 
 export const providerIdSchema = z.string().min(1);
 
+export const aiUseCases = ["llm", "image", "video", "tts", "stt", "music", "research"] as const;
+
+export const setUseCaseDefaultSchema = z.object({
+  useCase: z.enum(aiUseCases),
+  providerId: z.string().min(1),
+  model: z.string().trim().min(1, "Choose a model").max(120),
+});
+
 export const githubPollSchema = z.object({
   pendingToken: z.string().min(1),
   label: labelSchema,

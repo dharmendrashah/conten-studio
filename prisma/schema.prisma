@@ -28,4 +28,23 @@ model AiProvider {
   defaultModel String?
   createdAt    DateTime       @default(now())
   updatedAt    DateTime       @updatedAt
+  useCaseDefaults UseCaseDefault[]
+}
+
+enum AiUseCase {
+  llm
+  image
+  video
+  tts
+  stt
+  music
+  research
+}
+
+model UseCaseDefault {
+  useCase    AiUseCase  @id
+  providerId String
+  provider   AiProvider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  model      String
+  updatedAt  DateTime   @updatedAt
 }

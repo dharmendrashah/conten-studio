@@ -9,6 +9,8 @@ import {
   getProviderSecret,
   recordTestResult,
   setProviderModel,
+  listUseCaseDefaults,
+  setUseCaseDefault,
 } from "./repository";
 
 type Row = {
@@ -33,6 +35,29 @@ function fakeDb() {
   const rows: Row[] = [];
   let seq = 0;
   const find = (id: string) => rows.find((r) => r.id === id) ?? null;
+  const useCaseRows: { useCase: string; providerId: string; model: string }[] = [];
+
+  const useCaseDefault = {
+    findMany: async () => useCaseRows.map((r) => ({ ...r })),
+    upsert: async ({
+      where,
+      create,
+      update,
+    }: {
+      where: { useCase: string };
+      create: { useCase: string; providerId: string; model: string };
+      update: { providerId: string; model: string };
+    }) => {
+      const existing = useCaseRows.find((r) => r.useCase === where.useCase);
+      if (existing) {
+        Object.assign(existing, update);
+        return { ...existing };
+      }
+      const row = { ...create };
+      useCaseRows.push(row);
+      return { ...row };
+    },
+  };
 
   const aiProvider = {
     findMany: async () => rows.map((r) => ({ ...r })),
@@ -76,9 +101,11 @@ function fakeDb() {
 
   const db: {
     aiProvider: typeof aiProvider;
+    useCaseDefault: typeof useCaseDefault;
     $transaction: <T>(fn: (tx: typeof db) => Promise<T>) => Promise<T>;
   } = {
     aiProvider,
+    useCaseDefault,
     $transaction: async (fn) => fn(db),
   };
   return db as unknown as PrismaClient;
@@ -200,5 +227,35 @@ describe("settings repository", () => {
     const db = fakeDb();
     const work = await createProvider(db, input("Work"));
     expect(work).toMatchObject({ lastTestOk: null, lastTestedAt: null });
+  });
+
+  it("stores a default provider and model for a use case", async () => {
+    const db = fakeDb();
+    const work = await createProvider(db, input("Work"));
+    await setUseCaseDefault(db, { useCase: "image", providerId: work.id, model: "dall-e-3" });
+    await expect(listUseCaseDefaults(db)).resolves.toEqual([
+      { useCase: "image", providerId: work.id, model: "dall-e-3" },
+    ]);
+  });
+
+  it("replaces the provider and model for one use case without touching the others", async () => {
+    const db = fakeDb();
+    const work = await createProvider(db, input("Work"));
+    const personal = await createProvider(db, input("Personal"));
+    await setUseCaseDefault(db, { useCase: "llm", providerId: work.id, model: "gpt-4o" });
+    await setUseCaseDefault(db, { useCase: "tts", providerId: work.id, model: "tts-1" });
+    await setUseCaseDefault(db, { useCase: "llm", providerId: personal.id, model: "claude-sonnet-5" });
+    const defaults = await listUseCaseDefaults(db);
+    expect(defaults).toHaveLength(2);
+    expect(defaults).toContainEqual({ useCase: "llm", providerId: personal.id, model: "claude-sonnet-5" });
+    expect(defaults).toContainEqual({ useCase: "tts", providerId: work.id, model: "tts-1" });
+  });
+
+  it("reports NOT_FOUND when the use-case provider does not exist", async () => {
+    const db = fakeDb();
+    await expectSettingsError(
+      setUseCaseDefault(db, { useCase: "video", providerId: "missing", model: "veo-3" }),
+      "NOT_FOUND",
+    );
   });
 });

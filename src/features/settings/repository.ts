@@ -1,4 +1,4 @@
-import type { AiProviderKind, PrismaClient } from "@/generated/prisma/client";
+import type { AiProviderKind, AiUseCase, PrismaClient } from "@/generated/prisma/client";
 
 export type SettingsErrorCode =
   | "NOT_FOUND"
@@ -144,4 +144,21 @@ export async function setProviderModel(db: PrismaClient, id: string, model: stri
   await findOrThrow(db, id);
   const row = await db.aiProvider.update({ where: { id }, data: { defaultModel: model } });
   return toPublic(row);
+}
+
+export type UseCaseDefault = { useCase: AiUseCase; providerId: string; model: string };
+
+export async function listUseCaseDefaults(db: PrismaClient): Promise<UseCaseDefault[]> {
+  const rows = await db.useCaseDefault.findMany();
+  return rows.map(({ useCase, providerId, model }) => ({ useCase, providerId, model }));
+}
+
+export async function setUseCaseDefault(db: PrismaClient, input: UseCaseDefault): Promise<void> {
+  const { useCase, providerId, model } = input;
+  await findOrThrow(db, providerId);
+  await db.useCaseDefault.upsert({
+    where: { useCase },
+    create: { useCase, providerId, model },
+    update: { providerId, model },
+  });
 }

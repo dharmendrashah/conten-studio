@@ -1,4 +1,4 @@
-import { createProviderSchema, keyLast4, updateProviderSchema } from "./schema";
+import { createProviderSchema, keyLast4, setUseCaseDefaultSchema, updateProviderSchema } from "./schema";
 
 describe("createProviderSchema", () => {
   it("accepts a valid provider and trims the label", () => {
@@ -42,5 +42,21 @@ describe("updateProviderSchema", () => {
 describe("keyLast4", () => {
   it("returns the last four characters of the key", () => {
     expect(keyLast4("sk-test-1234567890abcd")).toBe("abcd");
+  });
+});
+
+describe("setUseCaseDefaultSchema", () => {
+  it("accepts each use case with a provider and model", () => {
+    for (const useCase of ["llm", "image", "video", "tts", "stt", "music", "research"]) {
+      expect(setUseCaseDefaultSchema.safeParse({ useCase, providerId: "p1", model: "m" }).success).toBe(true);
+    }
+  });
+
+  it("rejects an unknown use case", () => {
+    expect(setUseCaseDefaultSchema.safeParse({ useCase: "podcast", providerId: "p1", model: "m" }).success).toBe(false);
+  });
+
+  it("rejects a blank model", () => {
+    expect(setUseCaseDefaultSchema.safeParse({ useCase: "llm", providerId: "p1", model: "  " }).success).toBe(false);
   });
 });

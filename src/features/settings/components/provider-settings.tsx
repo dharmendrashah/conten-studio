@@ -30,14 +30,7 @@ import {
 import { ModelDialog, type ModelPicker } from "./model-dialog";
 import { toast } from "sonner";
 import { providerKinds } from "../schema";
-
-const kindLabels: Record<(typeof providerKinds)[number], string> = {
-  openai: "OpenAI",
-  anthropic: "Anthropic",
-  google: "Google Gemini",
-  openrouter: "OpenRouter",
-  github: "GitHub Copilot",
-};
+import { kindLabels } from "../labels";
 
 type FormState = {
   label: string;
@@ -440,7 +433,7 @@ export function ProviderSettings({ providers }: { providers: PublicProvider[] })
           <DialogHeader>
             <DialogTitle>Delete provider?</DialogTitle>
             <DialogDescription>
-              {`"${pendingDelete?.label ?? ""}" and its stored key will be removed. This cannot be undone.`}
+              {`"${pendingDelete?.label ?? ""}" and its stored key will be removed. Default models that use it will be cleared. This cannot be undone.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
